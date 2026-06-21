@@ -1,6 +1,5 @@
 import os
-import instructor
-from openai import AsyncOpenAI
+import google.generativeai as genai
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from datetime import date
@@ -21,15 +20,27 @@ class TransactionAction(BaseModel):
 
 async def parse_message(text: str) -> TransactionAction:
     """
-    Analyzes the user's message and returns a structured TransactionAction object usando OpenAI.
+    Analyzes the user's message and returns a structured TransactionAction object usando Gemini.
     """
-    client = instructor.from_openai(AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY")))
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     
-    return await client.chat.completions.create(
-        model="gpt-4o-mini",
-        response_model=TransactionAction,
-        messages=[
-            {"role": "system", "content": "Você é um assistente financeiro pessoal que lê mensagens informais e extrai intenções financeiras."},
-            {"role": "user", "content": text}
-        ],
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-flash",
+        system_instruction=(
+            "Você é um assistente financeiro pessoal que lê mensagens informais e extrai intenções financeiras.\n"
+            "Retorne EXATAMENTE um objeto JSON (sem formatação Markdown) com as seguintes chaves rigorosamente:\n"
+            "1. 'intent': Apenas os valores 'expense', 'income', 'summary', ou 'unknown'.\n"
+            "2. 'amount': Número float positivo ou null.\n"
+            "3. 'category': Categoria curta ou null.\n"
+            "4. 'description': Descrição curta ou null."
+        )
     )
+    
+    response = await model.generate_content_async(
+        text,
+        generation_config=genai.GenerationConfig(
+            response_mime_type="application/json"
+        ),
+    )
+    
+    return TransactionAction.model_validate_json(response.text)
