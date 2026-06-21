@@ -25,7 +25,7 @@ async def parse_message(text: str) -> TransactionAction:
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
+        model_name="gemini-1.5-pro",
         system_instruction=(
             "Você é um assistente financeiro pessoal que lê mensagens informais e extrai intenções financeiras.\n"
             "Retorne EXATAMENTE um objeto JSON (sem formatação Markdown) com as seguintes chaves rigorosamente:\n"
